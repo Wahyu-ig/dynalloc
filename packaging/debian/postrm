@@ -1,0 +1,37 @@
+#!/bin/sh
+# Debian postrm — runs after package removal
+set -e
+
+case "$1" in
+  purge)
+    # Remove symlinks
+    rm -f /usr/local/bin/dynalloc
+    rm -f /usr/local/bin/dynalloc-daemon
+    # Remove systemd user service
+    rm -f /etc/systemd/user/dynalloc.service
+    # Remove config files (only on purge, not on remove)
+    rm -rf /etc/dynalloc
+    # Remove state file
+    rm -f /tmp/dynalloc-state.json
+    rm -f /tmp/dynalloc-*.sock
+    # Remove log files
+    rm -rf /var/log/dynalloc 2>/dev/null || true
+    echo "DynAlloc purged. System restored to default state."
+    ;;
+  remove)
+    # Remove symlinks only
+    rm -f /usr/local/bin/dynalloc
+    rm -f /usr/local/bin/dynalloc-daemon
+    echo "DynAlloc removed. Config files preserved in /etc/dynalloc."
+    ;;
+  upgrade|failed-upgrade|abort-upgrade|disappear)
+    ;;
+  *)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

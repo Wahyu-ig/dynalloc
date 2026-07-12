@@ -1,0 +1,129 @@
+{
+  "_comment_lokasi": "Simpan file ini sebagai ~/.config/dynalloc/config.json atau /etc/dynalloc/config.json (hapus semua field '_comment_*' sebelum dipakai — JSON standar tidak mendukung komentar).",
+
+  "_comment_tick": "Interval polling dalam milidetik. FAST_TICK baca PSI (murah), SLOW_TICK deteksi window fokus + scan proses (mahal). FAST_TICK_IDLE_MS dipakai otomatis setelah 10x tick berturut-turut NORMAL, untuk hemat resource lebih jauh saat sistem tenang.",
+  "FAST_TICK_MS": 1000,
+  "SLOW_TICK_MS": 3000,
+  "FAST_TICK_IDLE_MS": 2500,
+
+  "_comment_psi": "Ambang PSI avg10 (persen) yang memicu perubahan status. WARN harus lebih kecil dari CRITICAL, kalau tidak akan fallback ke default.",
+  "PSI_CPU_WARN": 8.0,
+  "PSI_CPU_CRITICAL": 20.0,
+  "PSI_MEM_WARN": 4.0,
+  "PSI_MEM_CRITICAL": 12.0,
+
+  "_comment_core": "Jumlah core yang direservasi khusus untuk aplikasi foreground. null = otomatis (50% dari total core). Field ini BUTUH RESTART daemon untuk berlaku, tidak hot-reload. Pada CPU Hybrid (Intel P-Core/E-Core), field ini diabaikan — P-Core otomatis jadi foreground.",
+  "FOREGROUND_CORE_RESERVE": null,
+
+  "_comment_pattern": "Daftar regex (sebagai string, case-insensitive) untuk nama proses yang selalu dianggap 'heavy background' kalau sedang aktif, terlepas dari %CPU-nya saat itu.",
+  "HEAVY_BG_PATTERNS": [
+    "^(cc1|cc1plus|ld|rustc|clang|gcc|g\\+\\+)$",
+    "node$",
+    "(chrome|chromium|firefox|brave)",
+    "(java|gradle|webpack)"
+  ],
+
+  "_comment_cpu_threshold": "Proses apa pun (walau tidak match pattern di atas) yang %CPU-nya >= angka ini akan tetap dianggap heavy background.",
+  "HEAVY_BG_CPU_THRESHOLD": 15.0,
+
+  "_comment_critical": "Daftar regex proses vital sistem/desktop yang TIDAK PERNAH di-throttle, walau match HEAVY_BG_PATTERNS atau lewat ambang CPU. Mencegah desktop sendiri lag gara-gara daemon ini (mis. gnome-shell/mutter/pipewire/NetworkManager kena throttle saat kebetulan CPU-nya tinggi).",
+  "CRITICAL_PROCESS_PATTERNS": [
+    "^(systemd|dbus-daemon|dbus-broker)$",
+    "^(Xorg|Xwayland)$",
+    "^(gnome-shell|mutter)$",
+    "^(kwin_x11|kwin_wayland|plasmashell)$",
+    "^(pipewire|pipewire-pulse|wireplumber|pulseaudio)$",
+    "^(NetworkManager|wpa_supplicant|systemd-network)$",
+    "^(sddm|gdm|gdm3|lightdm)$"
+  ],
+
+  "_comment_log": "'debug' | 'info' | 'warn'. Override lewat env DYNALLOC_LOG_LEVEL akan menang dari nilai di sini.",
+  "LOG_LEVEL": "info",
+
+  "_comment_dry_run": "true = tidak eksekusi perintah nyata, hanya log. Override lewat env DYNALLOC_DRY_RUN=1 akan menang dari nilai di sini.",
+  "DRY_RUN": false,
+
+  "_comment_hot_reload": "true = daemon otomatis reload field yang aman begitu file ini disimpan ulang, tanpa perlu restart service.",
+  "HOT_RELOAD": true,
+
+  "_comment_cgroups": "Kontrol proporsional (cpu.weight/cpu.max) menggantikan taskset+renice yang kasar, kalau kernel/sistem mendukung cgroups v2 dan daemon punya izin delegation. Kalau tidak tersedia, otomatis fallback ke taskset+renice — tidak fatal. BUTUH RESTART kalau diubah.",
+  "ENABLE_CGROUPS_V2": true,
+  "CGROUP_ROOT": "/sys/fs/cgroup",
+  "CGROUP_PARENT_SLICE": "dynalloc.slice",
+  "_comment_cgroup_mode": "'auto' = coba cgroup delegasi milik daemon sendiri (aman utk `systemctl --user`), fallback ke CGROUP_ROOT kalau gagal deteksi. 'own' = WAJIB pakai delegasi sendiri, jangan pernah fallback ke root. 'root' = pakai CGROUP_ROOT apa adanya (butuh daemon jalan sebagai root/system service, BUKAN systemctl --user).",
+  "CGROUP_MODE": "auto",
+
+  "_comment_cpu_weight": "cpu.weight: rentang 1-10000 (default sistem biasanya 100). cpu.max: \"MAX PERIODE\" mikrodetik atau \"max\" = tanpa batas.",
+  "FOREGROUND_CPU_WEIGHT": 800,
+  "BACKGROUND_CPU_WEIGHT": 20,
+  "FOREGROUND_CPU_MAX": "max",
+  "BACKGROUND_CPU_MAX": "40000 100000",
+
+  "_comment_governor": "Pinning core saja tidak cukup kalau governor-nya masih hemat daya. Governor asli tiap core disimpan di awal & dikembalikan saat daemon berhenti.",
+  "ENABLE_GOVERNOR_SWITCH": true,
+  "GOVERNOR_BOOST": "performance",
+  "_comment_governor_sudo": "scaling_governor di sysfs SELALU root-only, tidak seperti cgroups yang bisa didelegasikan. Set true + siapkan sudoers rule NOPASSWD khusus untuk `cpupower frequency-set` kalau daemon jalan sebagai `systemctl --user` (bukan root/system service).",
+  "GOVERNOR_USE_SUDO": false,
+
+  "_comment_oom": "Lindungi foreground app dari OOM killer saat memory pressure tinggi. Rentang valid [-1000,1000], makin negatif makin dilindungi.",
+  "ENABLE_OOM_PROTECTION": true,
+  "FOREGROUND_OOM_SCORE_ADJ": -500,
+
+  "_comment_notify": "Notifikasi desktop ringan lewat notify-send saat boost aktif.",
+  "ENABLE_NOTIFICATIONS": true,
+
+  "_comment_gamemode": "Kalau Feral GameMode sudah aktif mengurus PID foreground, DynAlloc tidak mengubah niceness/governor-nya (menghindari rebutan), tapi tetap urus core/cgroup & OOM protection.",
+  "ENABLE_GAMEMODE_COEXIST": true,
+
+  "_comment_event_focus": "Deteksi fokus event-driven via sinyal D-Bus (GNOME/Wayland saja untuk saat ini), menggantikan polling gdbus call tiap slowTick. Fallback otomatis ke polling kalau subscribe sinyal gagal.",
+  "ENABLE_EVENT_DRIVEN_FOCUS": true,
+
+  "_comment_v2_cpu_history": "[v2.0] Jumlah sampel PSI untuk moving average. Semakin besar semakin halus tapi respon lebih lambat. Rentang [1, 60].",
+  "CPU_HISTORY_SIZE": 5,
+
+  "_comment_v2_hysteresis": "[v2.0] Waktu minimum (ms) sebelum scheduler boleh berpindah state. Mencegah boost-throttle berulang cepat.",
+  "HYSTERESIS_NORMAL_TO_WARN_MS": 3000,
+  "HYSTERESIS_WARN_TO_CRITICAL_MS": 3000,
+  "HYSTERESIS_CRITICAL_TO_NORMAL_MS": 5000,
+
+  "_comment_v2_auto_restore": "[v2.0] Otomatis kembalikan semua proses yang di-throttle saat stress kembali ke NORMAL.",
+  "AUTO_RESTORE": true,
+
+  "_comment_v2_multimedia": "[v2.0] Lindungi proses yang sedang memutar audio/video (PipeWire, PulseAudio, mpv, vlc, OBS, Discord, dll) dari throttle.",
+  "ENABLE_MULTIMEDIA_PROTECTION": true,
+
+  "_comment_v2_topology": "[v2.0] Deteksi CPU topology (SMT, NUMA, Intel Hybrid P-Core/E-Core, AMD CCD). Pada Hybrid CPU, Interactive workload otomatis diprioritaskan ke P-Core.",
+  "ENABLE_CPU_TOPOLOGY": true,
+
+  "_comment_v2_adaptive": "[v2.0] Scheduler adaptif mempertimbangkan CPU pressure, memory pressure, foreground activity, media playback, battery, dan thermal.",
+  "ENABLE_ADAPTIVE_SCHEDULER": true,
+
+  "_comment_v2_weights": "[v2.0] Bobot untuk setiap faktor dalam adaptive scoring. Nilai lebih tinggi = faktor lebih berpengaruh.",
+  "ADAPTIVE_WEIGHT_CPU": 1.0,
+  "ADAPTIVE_WEIGHT_MEM": 0.8,
+  "ADAPTIVE_WEIGHT_FOREGROUND": 0.5,
+  "ADAPTIVE_WEIGHT_MEDIA": 1.2,
+  "ADAPTIVE_WEIGHT_BATTERY": 0.3,
+  "ADAPTIVE_WEIGHT_THERMAL": 0.4,
+
+  "_comment_v2_class_priority": "[v2.0] Priority tiap scheduler class. Lebih tinggi = lebih diprioritaskan. Dipakai untuk penentuan core pinning.",
+  "SCHEDULER_CLASS_REALTIME_PRIORITY": 100,
+  "SCHEDULER_CLASS_INTERACTIVE_PRIORITY": 80,
+  "SCHEDULER_CLASS_MULTIMEDIA_PRIORITY": 70,
+  "SCHEDULER_CLASS_BACKGROUND_PRIORITY": 30,
+  "SCHEDULER_CLASS_IDLE_PRIORITY": 10,
+
+  "_comment_v2_class_nice": "[v2.0] Niceness (prioritas CPU) tiap scheduler class. -20 sampai 19, lebih rendah = prioritas lebih tinggi.",
+  "SCHEDULER_CLASS_REALTIME_NICE": -10,
+  "SCHEDULER_CLASS_INTERACTIVE_NICE": -5,
+  "SCHEDULER_CLASS_MULTIMEDIA_NICE": -3,
+  "SCHEDULER_CLASS_BACKGROUND_NICE": 10,
+  "SCHEDULER_CLASS_IDLE_NICE": 19,
+
+  "_comment_v2_class_ioprio": "[v2.0] I/O priority tiap scheduler class. Format: [class, level]. Class: 1=RT, 2=BE, 3=Idle. Level: 0-7 (lower=better).",
+  "SCHEDULER_CLASS_REALTIME_IOPRIO": [1, 0],
+  "SCHEDULER_CLASS_INTERACTIVE_IOPRIO": [1, 4],
+  "SCHEDULER_CLASS_MULTIMEDIA_IOPRIO": [1, 2],
+  "SCHEDULER_CLASS_BACKGROUND_IOPRIO": [3, 0],
+  "SCHEDULER_CLASS_IDLE_IOPRIO": [3, 7]
+}

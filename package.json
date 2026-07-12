@@ -1,0 +1,42 @@
+{
+  "name": "dynalloc",
+  "version": "1.0.0",
+  "description": "AI-Powered Adaptive Linux Resource Manager — daemon Linux untuk CPU core pinning, priority scheduling, memory/IO/network QoS dinamis berbasis PSI (Pressure Stall Information).",
+  "main": "dynalloc-daemon.js",
+  "bin": {
+    "dynalloc": "./dynalloc-cli.js",
+    "dynalloc-daemon": "./dynalloc-daemon.js"
+  },
+  "scripts": {
+    "start": "node dynalloc-daemon.js",
+    "test": "node --test test/unit/test-all.js test/unit/test-policy-engine.js test/unit/test-network-controller.js test/integration/test-integration.js test/integration/test-policy-integration.js",
+    "test:unit": "node --test test/unit/test-all.js test/unit/test-policy-engine.js test/unit/test-network-controller.js",
+    "test:integration": "node --test test/integration/test-integration.js test/integration/test-policy-integration.js",
+    "syntax-check": "bash -c 'fail=0; for f in *.js policy-engine/*.js plugins/*.js detectors/*.js profiles/*.js adaptive/*.js recognition/*.js monitoring/*.js sdk/*.js lib/*.js lib/controllers/*.js scripts/*.js test/unit/*.js test/integration/*.js; do [ -f \"$$f\" ] && node --check \"$$f\" || fail=1; done; exit $$fail'",
+    "ci-check": "bash scripts/ci-check.sh",
+    "test:detectors": "node --test test/unit/test-detector-layer.js",
+    "test:resource-controllers": "node --test test/unit/test-resource-controller-layer.js",
+    "test:profiles": "node --test test/unit/test-profile-manager.js",
+    "test:adaptive": "node --test test/unit/test-adaptive-switching.js",
+    "test:recognition": "node --test test/unit/test-workload-recognition.js",
+    "test:monitoring": "node --test test/unit/test-monitoring-framework.js",
+    "test:sdk": "node --test test/unit/test-plugin-sdk.js",
+    "verify:all": "bash -c 'for s in verify-fixes verify-foreground verify-medium-features verify-memory-cgroup verify-pid-reuse verify-ppd verify-thermal verify-actuator-api verify-controller-isolation verify-network-qos verify-detector-layer verify-resource-controller-layer verify-profile-manager verify-adaptive-switching verify-workload-recognition verify-monitoring-framework verify-plugin-sdk; do node \"scripts/${s}.js\" || exit 1; done'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "linux"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "linux",
+    "scheduler",
+    "psi",
+    "gaming",
+    "performance",
+    "cpu-affinity",
+    "cachyos"
+  ]
+}

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Debian prerm — runs before package removal
+set -e
+
+case "$1" in
+  remove|deconfigure)
+    # Stop the daemon if running
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl --user stop dynalloc.service 2>/dev/null || true
+      systemctl --user disable dynalloc.service 2>/dev/null || true
+    fi
+    # Kill any running dynalloc process
+    pkill -f "dynalloc-daemon.js" 2>/dev/null || true
+  ;;
+  upgrade|failed-upgrade)
+  ;;
+  *)
+    echo "prerm called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+esac
+
+#DEBHELPER#
+
+exit 0

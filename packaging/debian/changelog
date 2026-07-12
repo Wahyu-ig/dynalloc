@@ -1,0 +1,20 @@
+# Debian changelog
+dynalloc (1.0.0-1) unstable; urgency=medium
+
+  * Stable v1.0 release
+  * Full adaptive resource management stack: Detector Layer, Resource
+    Controller, Profile Manager, Adaptive Switching, Workload Recognition,
+    Monitoring Framework, Plugin SDK
+  * 817 tests passing, 513 verify assertions passing
+  * 8 optional subsystems, all default OFF for backward compatibility
+
+ -- DynAlloc Team <dynalloc@example.com>  Sat, 12 Jul 2026 00:00:00 +0000
+
+dynalloc (0.2.1-1) unstable; urgency=medium
+
+  * Initial Debian package release
+  * Features: CLI tool, universal foreground detection, PID reuse protection,
+    memory/IO cgroup limits, PPD coordination, thermal-aware boosting
+  * 613 tests passing
+
+ -- DynAlloc Team <dynalloc@example.com>  Fri, 11 Jul 2025 00:00:00 +0000
