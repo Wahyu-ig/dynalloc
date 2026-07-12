@@ -99,11 +99,55 @@ Optional, auto-detected if present (DynAlloc degrades gracefully without any of 
 
 ## Installation
 
-### Arch / CachyOS (recommended)
+### Arch / CachyOS (recommended — proper package, tracked by pacman)
 
 ```bash
 cd packaging/arch
 makepkg -si
+```
+
+### Manual install (extract & copy directly)
+
+If you'd rather not build a package — e.g. installing straight from a downloaded release zip, or upgrading an existing manual install in place — extract and copy everything straight to `/opt/dynalloc`:
+
+```bash
+# 1. Extract the source
+unzip dynalloc-v1.0.0.zip -d ~/Downloads/
+# (or: git clone <repo-url> ~/Downloads/dynalloc && cd ~/Downloads/dynalloc)
+
+# 2. Stop the daemon first if you're upgrading an existing install
+systemctl --user stop dynalloc.service
+
+# 3. Copy everything to /opt/dynalloc (this brings ALL module folders —
+#    detectors/, profiles/, adaptive/, recognition/, monitoring/, sdk/,
+#    lib/ — along with the core files, in one shot)
+sudo mkdir -p /opt/dynalloc
+sudo cp -a ~/Downloads/dylok/. /opt/dynalloc/
+sudo chmod +x /opt/dynalloc/dynalloc-cli.js /opt/dynalloc/dynalloc-daemon.js
+
+# 4. Symlink the CLI
+sudo ln -sf /opt/dynalloc/dynalloc-cli.js /usr/local/bin/dynalloc
+sudo ln -sf /opt/dynalloc/dynalloc-daemon.js /usr/local/bin/dynalloc-daemon
+
+# 5. Install/refresh the systemd user unit
+mkdir -p ~/.config/systemd/user
+cp /opt/dynalloc/systemd/dynalloc.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+
+# 6. Set capabilities for non-root priority control (only needed once)
+sudo setcap 'cap_sys_nice+ep' /usr/bin/renice /usr/bin/ionice
+```
+
+This is also the fastest way to pick up a single fixed/updated file without reinstalling everything — e.g. after pulling a fix, just `sudo cp <file> /opt/dynalloc/<file>` and `systemctl --user restart dynalloc.service`.
+
+### Manual install (via `install.sh`)
+
+Same result as the manual copy above, scripted:
+
+```bash
+./install.sh                       # installs to /opt/dynalloc
+# or
+./install.sh --prefix ~/.local/dynalloc
 ```
 
 ### Debian / Ubuntu
@@ -119,14 +163,6 @@ sudo apt install ../dynalloc_*.deb
 ```bash
 rpmbuild -bb packaging/rpm/dynalloc.spec
 sudo dnf install ~/rpmbuild/RPMS/noarch/dynalloc-*.rpm
-```
-
-### Manual install
-
-```bash
-./install.sh                       # installs to /opt/dynalloc
-# or
-./install.sh --prefix ~/.local/dynalloc
 ```
 
 ### After installing (any method)
