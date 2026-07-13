@@ -1,0 +1,51 @@
+[Unit]
+Description=DynAlloc - Dynamic Resource Allocator
+Documentation=https://github.com/Wahyu-ig/dynalloc
+After=graphical-session.target
+# Cegah systemd nyerah kalau kena crash-loop pas boot (misal env D-Bus
+# belum siap). Tanpa ini, restart otomatis berhenti setelah burst limit
+# default (5x/10s) tercapai dan unit jadi "failed" permanen sampai
+# di-restart manual.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# Tunggu sampai ekstensi "Window Calls Extended" beneran punya interface
+# D-Bus yang bisa dipanggil, sebelum daemon Node di-spawn. Ini penting
+# karena Node membaca environment (termasuk DBUS_SESSION_BUS_ADDRESS)
+# HANYA sekali saat proses lahir — kalau environment session belum
+# lengkap saat itu, proses akan gagal panggil gdbus SELAMANYA sampai
+# di-restart (retry di dalam kode tidak akan pernah menolong).
+# Loop ini nunggu maks 30 detik, tapi tetap exit 0 walau timeout supaya
+# ExecStart tetap jalan (fallback polling X11/xdotool dsb masih ada).
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/WindowsExt --method org.gnome.Shell.Extensions.WindowsExt.FocusPID >/dev/null 2>&1 && exit 0; sleep 1; done; exit 0'
+# Sesuaikan path ini kalau install ke lokasi lain (default: /opt/dynalloc)
+ExecStart=/usr/bin/node /opt/dynalloc/dynalloc-daemon.js
+WorkingDirectory=/opt/dynalloc
+Restart=always
+RestartSec=5
+Environment=DYNALLOC_LOG_LEVEL=info
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dynalloc
+
+# PENTING — ini unit level USER (bukan system service), sengaja:
+#   1. Otomatis punya akses ke D-Bus session bus milik user yang login,
+#      dibutuhkan untuk deteksi foreground window di GNOME/Wayland lewat
+#      extension "Window Calls Extended".
+#   2. CAP_SYS_NICE untuk renice -5 / ionice realtime TIDAK dipasang lewat
+#      AmbientCapabilities di sini (user unit tidak bisa naikkan capability
+#      sendiri) — melainkan lewat file capability langsung di binary:
+#        sudo setcap 'cap_sys_nice+ep' /usr/bin/renice
+#        sudo setcap 'cap_sys_nice+ep' /usr/bin/ionice
+#      Lihat README/Configuration.md bagian "Setup Privilege" untuk detail.
+#
+# Install & aktifkan (BUKAN pakai sudo systemctl):
+#   mkdir -p ~/.config/systemd/user
+#   cp systemd/dynalloc.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now dynalloc.service
+#   journalctl --user -u dynalloc.service -f
+
+[Install]
+WantedBy=default.target

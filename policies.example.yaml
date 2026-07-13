@@ -1,0 +1,131 @@
+# DynAlloc Policy Engine — example policies file (YAML format)
+# ============================================================
+# Copy to ~/.config/dynalloc/policies.yaml (or policies.json for the
+# JSON equivalent) and edit. The daemon auto-detects which path
+# exists. Hot-reload is active by default — save the file and changes
+# take effect within ~300ms without restarting the daemon.
+
+profiles:
+  gaming:
+    governor: performance
+    governorCores: foreground
+    schedulerMode: aggressive
+    foregroundBoost: true
+
+  powersave:
+    governor: powersave
+    governorCores: all
+    schedulerMode: conservative
+    foregroundBoost: false
+
+  balanced:
+    governor: schedutil
+    governorCores: foreground
+    schedulerMode: balanced
+    foregroundBoost: true
+
+  streaming:
+    governor: performance
+    governorCores: foreground
+    schedulerMode: balanced
+    foregroundBoost: true
+
+rules:
+  - id: steam-gaming-profile
+    description: When Steam starts and battery is healthy and CPU is not overheating, switch to gaming profile
+    when:
+      event: onProcessStarted
+    match:
+      comm: matches ^steam$
+    condition:
+      AND:
+        - battery.capacity: '>40'
+        - battery.onBattery: false
+        - thermal.temp: '<85'
+    action:
+      type: applyProfile
+      profile: gaming
+    priority: 100
+    cooldown: 5000
+
+  - id: battery-low-powersave
+    description: When battery drops below 20%, switch to powersave profile
+    when:
+      event: onBatteryLow
+    action:
+      type: applyProfile
+      profile: powersave
+    priority: 200
+    cooldown: 30000
+
+  - id: cpu-high-aggressive
+    description: When CPU pressure crosses WARN threshold, switch scheduler to aggressive mode
+    when:
+      event: onCpuHigh
+    action:
+      type: setSchedulerMode
+      mode: aggressive
+    priority: 50
+    cooldown: 10000
+
+  - id: cpu-normal-balanced
+    description: When CPU pressure returns to normal, restore balanced scheduler mode
+    when:
+      event: onCpuNormal
+    action:
+      type: setSchedulerMode
+      mode: balanced
+    priority: 50
+    cooldown: 10000
+
+  - id: thermal-high-powersave
+    description: When thermal crosses 75C, switch to powersave governor to cool down
+    when:
+      event: onThermalHigh
+    action:
+      type: setGovernor
+      governor: powersave
+      cores: all
+    priority: 180
+    cooldown: 30000
+
+  - id: wallpaper-refresh-palette
+    description: When wallpaper changes, emit onWallpaperChanged (palette plugins can react)
+    when:
+      event: onWallpaperChanged
+    action:
+      type: refreshPalette
+      target: wallpaper
+    priority: 10
+    cooldown: 1000
+
+  - id: steam-and-battery-and-temp-gaming
+    description: 'Complex compound rule: Steam running AND battery > 40 AND CPU temp < 85 → Gaming profile'
+    when:
+      event: onProcessStarted
+    match:
+      comm: matches ^steam$
+    condition:
+      AND:
+        - OR:
+            - battery.capacity: '>40'
+            - battery.onBattery: false
+        - NOT:
+            thermal.temp: '>=85'
+    action:
+      type: applyProfile
+      profile: gaming
+    priority: 90
+    cooldown: 10000
+    delay: 500
+
+  - id: notify-on-plugin-loaded
+    description: Send a desktop notification whenever a new plugin is loaded
+    when:
+      event: onPluginLoaded
+    action:
+      type: notify
+      summary: DynAlloc Plugin Loaded
+      body: A new plugin has been registered with the Policy Engine
+    priority: 10
+    cooldown: 1000

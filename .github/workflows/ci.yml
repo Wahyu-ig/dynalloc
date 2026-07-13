@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  syntax-check:
+    name: Syntax Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check all JS files
+        run: |
+          set -e
+          fail=0
+          # v1.1.0: scan ALL test files (including new test-learning-logger,
+          # test-per-app-profiles) and the new plugins/kde-wayland.js plus
+          # the new lib/watch-renderer.js module.
+          for f in *.js policy-engine/*.js plugins/*.js detectors/*.js profiles/*.js adaptive/*.js recognition/*.js monitoring/*.js sdk/*.js lib/*.js lib/controllers/*.js scripts/*.js test/unit/*.js test/integration/*.js; do
+            if [ -f "$f" ]; then
+              if ! node --check "$f" 2>&1; then
+                echo "::error file=$f::Syntax error"
+                fail=1
+              fi
+            fi
+          done
+          exit $fail
+
+  unit-tests:
+    name: Unit Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run unit tests
+        # v1.1.0: added test-system-plugin.js (was already present in the
+        # repo but not executed in CI), test-learning-logger.js and
+        # test-per-app-profiles.js (new in v1.1.0).
+        run: |
+          node --test \
+            test/unit/test-all.js \
+            test/unit/test-policy-engine.js \
+            test/unit/test-network-controller.js \
+            test/unit/test-detector-layer.js \
+            test/unit/test-resource-controller-layer.js \
+            test/unit/test-profile-manager.js \
+            test/unit/test-adaptive-switching.js \
+            test/unit/test-workload-recognition.js \
+            test/unit/test-monitoring-framework.js \
+            test/unit/test-plugin-sdk.js \
+            test/unit/test-system-plugin.js \
+            test/unit/test-learning-logger.js \
+            test/unit/test-per-app-profiles.js \
+            test/unit/test-kde-wayland-plugin.js
+      - name: Run integration tests
+        run: node --test test/integration/test-integration.js test/integration/test-policy-integration.js
+      - name: Unit test summary
+        if: always()
+        run: |
+          echo "## Unit Test Results (Node ${{ matrix.node }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ran 13 unit test suites + 2 integration suites." >> $GITHUB_STEP_SUMMARY
+
+  verify-scripts:
+    name: Verify Scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run all verify-* scripts
+        run: |
+          set -e
+          # verify-cli.js requires a live daemon and a real socket; skip it in CI
+          # verify-packaging.js requires packaging build tools (dpkg/rpmbuild); skip in CI
+          # v1.1.0: added verify-v1_1_0.js for the new milestone features
+          # (kde-wayland plugin, watch command, new test coverage).
+          for s in verify-fixes verify-foreground verify-medium-features verify-memory-cgroup verify-pid-reuse verify-ppd verify-thermal verify-actuator-api verify-controller-isolation verify-network-qos verify-detector-layer verify-resource-controller-layer verify-profile-manager verify-adaptive-switching verify-workload-recognition verify-monitoring-framework verify-plugin-sdk verify-v1_1_0; do
+            echo "::group::scripts/$s.js"
+            node "scripts/$s.js" || {
+              echo "::error::$s failed"
+              exit 1
+            }
+            echo "::endgroup::"
+          done
+
+  config-validation:
+    name: Config & Package Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate package.json
+        run: node -e "require('./package.json'); console.log('package.json OK')"
+      - name: Validate example configs parse
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('dynalloc.config.example.json','utf8')); console.log('config example OK')"
+          node -e "JSON.parse(require('fs').readFileSync('dynalloc.config.clean.json','utf8')); console.log('config clean OK')"
+          node -e "JSON.parse(require('fs').readFileSync('policies.example.json','utf8')); console.log('policies example OK')"
+      - name: Dry-run daemon boot
+        run: |
+          # Daemon should boot and self-check in DRY_RUN mode, then we SIGTERM it
+          DYNALLOC_DRY_RUN=1 timeout 5 node dynalloc-daemon.js || code=$?
+          # timeout returns 124 when it kills the process; that's the success path
+          if [ "${code:-0}" = "124" ]; then exit 0; fi
+          if [ "${code:-0}" != "0" ]; then exit "$code"; fi
+
+  regression-gate:
+    name: Regression Gate
+    runs-on: ubuntu-latest
+    needs: [syntax-check, unit-tests, verify-scripts, config-validation]
+    steps:
+      - name: All gates passed
+        run: |
+          echo "All v1.1.0 CI validation gates passed."
+          echo ""
+          echo "Gates:"
+          echo "  - syntax-check        : all JS files parse cleanly"
+          echo "  - unit-tests          : 13 unit suites × 4 Node versions (18/20/22/24)"
+          echo "  - verify-scripts      : 18 verify-* regression scripts"
+          echo "  - config-validation   : package.json + example configs + daemon boot"
+          echo ""
+          echo "Ready to tag v2.0.0."

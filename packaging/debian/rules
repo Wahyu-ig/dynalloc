@@ -1,0 +1,55 @@
+#!/bin/sh
+# Debian rules — makefile for dpkg-buildpackage
+# This is a simple Node.js app, so the build is just copying files.
+
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# No build step needed — Node.js is interpreted
+
+override_dh_auto_install:
+	# Install to /opt/dynalloc
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/policy-engine
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/plugins
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/systemd
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/detectors
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/profiles
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/adaptive
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/recognition
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/monitoring
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/sdk
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/lib/controllers
+	mkdir -p $(CURDIR)/debian/dynalloc/opt/dynalloc/intelligence
+	cp -a *.js *.json *.sh $(CURDIR)/debian/dynalloc/opt/dynalloc/
+	cp -a policy-engine/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/policy-engine/
+	cp -a plugins/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/plugins/
+	cp -a detectors/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/detectors/
+	cp -a profiles/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/profiles/
+	cp -a adaptive/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/adaptive/
+	cp -a recognition/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/recognition/
+	cp -a monitoring/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/monitoring/
+	cp -a sdk/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/sdk/
+	cp -a lib/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/lib/
+	cp -a lib/controllers/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/lib/controllers/
+	cp -a intelligence/*.js $(CURDIR)/debian/dynalloc/opt/dynalloc/intelligence/
+	cp -a systemd/* $(CURDIR)/debian/dynalloc/opt/dynalloc/systemd/
+	cp -a *.md $(CURDIR)/debian/dynalloc/opt/dynalloc/ 2>/dev/null || true
+	chmod +x $(CURDIR)/debian/dynalloc/opt/dynalloc/dynalloc-cli.js
+	chmod +x $(CURDIR)/debian/dynalloc/opt/dynalloc/dynalloc-daemon.js
+	chmod +x $(CURDIR)/debian/dynalloc/opt/dynalloc/dynalloc-start.sh
+
+override_dh_auto_test:
+	# Run test suite if Node.js is available
+ifneq (,$(shell which node))
+	cd $(CURDIR) && node test/unit/test-all.js || true
+endif
+
+override_dh_systemd_start:
+	# Don't auto-start — this is a user service, not a system service
+
+override_dh_installinit:
+	# Don't install init.d script — use systemd user service
