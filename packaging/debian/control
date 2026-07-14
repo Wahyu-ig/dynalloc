@@ -1,0 +1,44 @@
+Package: dynalloc
+Version: 2.1.0
+Section: utils
+Priority: optional
+Architecture: all
+Depends: nodejs (>= 18.0.0), procps, util-linux, cgroup-tools | libcgroup-tools
+Recommends: gdbus, cpufrequtils | linux-tools-common, xdotool, notify-utils | libnotify-bin
+Suggests: power-profiles-daemon, gamemode, pipewire, pipewire-pulse, wireplumber
+Maintainer: Wahyu-ig <wyuhono@gmail.com>
+Description: AI-Powered Adaptive Linux Resource Manager
+ DynAlloc is a lightweight daemon that monitors PSI (Pressure Stall
+ Information) and dynamically manages CPU affinity, niceness, I/O
+ priority, cgroups v2, CPU governor, OOM score, and memory/IO limits.
+ .
+ Key features:
+  * Multi-level scheduler (Realtime/Interactive/Multimedia/Background/Idle)
+  * Process classifier (Game, Browser, IDE, Compiler, Media, etc.)
+  * Multimedia detector (PipeWire, PulseAudio, media players)
+  * CPU topology awareness (SMT, NUMA, Intel Hybrid, AMD CCD)
+  * Hysteresis + adaptive scoring (CPU, memory, foreground, media, battery, thermal)
+  * Memory & IO cgroup limits (protect foreground from background OOM)
+  * PID reuse protection via start-time validation
+  * PPD coordination (no conflict with power-profiles-daemon)
+  * Thermal-aware boosting (prevent thermal throttle death spiral)
+  * Universal foreground detection (GNOME/KDE/Hyprland/Sway/X11)
+  * Intelligence subsystem (learning, recommendations, explainability, timeline)
+  * Predictive pre-allocation engine ("Crystal Ball")
+  * Per-app energy accounting via RAPL
+  * CPU+GPU shared power budget arbiter
+  * GPU VRAM pressure reclaim controller
+  * Plugin system (browser, game, spotify, discord, obs, steam, wallpaper)
+  * Policy engine (JSON/YAML rules with event-driven actions)
+  * Hot-reload config without restart
+  * Safe rollback + crash recovery
+  * CLI tool for status/control (`dynalloc status`, `dynalloc boost <pid>`)
+ .
+ Install and enable:
+   mkdir -p ~/.config/systemd/user
+   cp /opt/dynalloc/systemd/dynalloc.service ~/.config/systemd/user/
+   systemctl --user daemon-reload
+   systemctl --user enable --now dynalloc.service
+ .
+ Or run manually:
+   DYNALLOC_DRY_RUN=1 node /opt/dynalloc/dynalloc-daemon.js

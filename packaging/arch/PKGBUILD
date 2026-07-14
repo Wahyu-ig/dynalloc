@@ -1,0 +1,147 @@
+# Maintainer: Wahyu-ig <wyuhono@gmail.com>
+# PKGBUILD for Arch Linux / AUR
+# Build: makepkg -si
+# AUR: https://aur.archlinux.org/packages/dynalloc
+
+pkgname=dynalloc
+pkgver=2.1.0
+pkgrel=1
+pkgdesc="AI-Powered Adaptive Linux Resource Manager — PSI-based scheduling with predictive engine, energy accounting, and VRAM reclaim"
+arch=('any')
+url="https://github.com/Wahyu-ig/dynalloc"
+license=('MIT')
+depends=('nodejs>=18' 'procps-ng' 'util-linux' 'glib2')
+optdepends=(
+  'cgroup-tools: cgroups v2 management'
+  'cpupower: CPU governor switching'
+  'xdotool: X11 foreground detection'
+  'libnotify: desktop notifications'
+  'power-profiles-daemon: PPD coordination'
+  'gamemode: Feral GameMode coexistence'
+  'pipewire: multimedia detection (PipeWire)'
+  'pipewire-pulse: multimedia detection (PulseAudio compat)'
+  'wireplumber: PipeWire session manager'
+  'sway: Sway foreground detection (swaymsg)'
+  'hyprland: Hyprland foreground detection (hyprctl)'
+  'nvidia-utils: GPU control and VRAM monitoring (NVIDIA)'
+)
+makedepends=()
+checkdepends=('nodejs')
+provides=('dynalloc')
+conflicts=()
+replaces=()
+backup=('etc/dynalloc/config.json' 'etc/dynalloc/policies.json')
+options=('!strip')
+install=dynalloc.install
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Wahyu-ig/dynalloc/archive/v$pkgver.tar.gz")
+# If building from local source (for dev), comment out the source line above
+# and use: source=("$pkgname-$pkgver::local::$(pwd)")
+sha256sums=('SKIP')  # Replace with actual hash for release
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  # Install to /opt/dynalloc
+  install -dm755 "$pkgdir/opt/dynalloc/policy-engine"
+  install -dm755 "$pkgdir/opt/dynalloc/plugins"
+  install -dm755 "$pkgdir/opt/dynalloc/systemd"
+  install -dm755 "$pkgdir/opt/dynalloc/detectors"
+  install -dm755 "$pkgdir/opt/dynalloc/profiles"
+  install -dm755 "$pkgdir/opt/dynalloc/adaptive"
+  install -dm755 "$pkgdir/opt/dynalloc/recognition"
+  install -dm755 "$pkgdir/opt/dynalloc/monitoring"
+  install -dm755 "$pkgdir/opt/dynalloc/sdk"
+  install -dm755 "$pkgdir/opt/dynalloc/intelligence"
+  install -dm755 "$pkgdir/opt/dynalloc/lib/controllers"
+  install -dm755 "$pkgdir/etc/dynalloc"
+  install -dm755 "$pkgdir/usr/local/bin"
+  install -dm755 "$pkgdir/usr/lib/systemd/user"
+
+  # Install JS files
+  for f in *.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Install JSON/config files
+  for f in *.json; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Install shell scripts (executable)
+  for f in *.sh; do
+    install -Dm755 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Make CLI and daemon executable
+  chmod +x "$pkgdir/opt/dynalloc/dynalloc-cli.js"
+  chmod +x "$pkgdir/opt/dynalloc/dynalloc-daemon.js"
+
+  # Install policy-engine
+  for f in policy-engine/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Install plugins
+  for f in plugins/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Install detector layer, profiles, adaptive switching, workload
+  # recognition, monitoring, plugin SDK, intelligence, and resource
+  # controller lib — all required for v2.1.0 tier 1 killer features.
+  for f in detectors/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in profiles/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in adaptive/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in recognition/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in monitoring/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in sdk/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in intelligence/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in lib/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+  for f in lib/controllers/*.js; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Install systemd user service
+  install -Dm644 systemd/dynalloc.service "$pkgdir/usr/lib/systemd/user/dynalloc.service"
+  install -Dm644 systemd/dynalloc.service "$pkgdir/opt/dynalloc/systemd/dynalloc.service"
+
+  # Install documentation
+  for f in *.md; do
+    install -Dm644 "$f" "$pkgdir/opt/dynalloc/$f"
+  done
+
+  # Install example configs
+  install -Dm644 dynalloc.config.example.json "$pkgdir/etc/dynalloc/config.json.example"
+  install -Dm644 policies.example.json "$pkgdir/etc/dynalloc/policies.json.example"
+  install -Dm644 policies.example.yaml "$pkgdir/etc/dynalloc/policies.yaml.example"
+
+  # Create symlinks in /usr/local/bin
+  ln -sf /opt/dynalloc/dynalloc-cli.js "$pkgdir/usr/local/bin/dynalloc"
+  ln -sf /opt/dynalloc/dynalloc-daemon.js "$pkgdir/usr/local/bin/dynalloc-daemon"
+
+  # Install license
+  install -Dm644 packaging/debian/copyright "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  node test/unit/test-all.js
+}
+
+# vim:set ts=2 sw=2 et:

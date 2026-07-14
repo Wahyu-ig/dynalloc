@@ -1,0 +1,61 @@
+#!/bin/sh
+# Debian postinst — runs after package installation
+set -e
+
+case "$1" in
+  configure)
+    # Install files to /opt/dynalloc (done by dpkg)
+    # Create symlink for CLI
+    if [ ! -L /usr/local/bin/dynalloc ]; then
+      ln -sf /opt/dynalloc/dynalloc-cli.js /usr/local/bin/dynalloc
+    fi
+    if [ ! -L /usr/local/bin/dynalloc-daemon ]; then
+      ln -sf /opt/dynalloc/dynalloc-daemon.js /usr/local/bin/dynalloc-daemon
+    fi
+
+    # Make CLI executable
+    chmod +x /opt/dynalloc/dynalloc-cli.js /opt/dynalloc/dynalloc-daemon.js
+
+    # Set capabilities on renice/ionice for non-root use
+    # (optional — only if user wants to run as non-root without sudo)
+    if command -v setcap >/dev/null 2>&1; then
+      setcap 'cap_sys_nice+ep' /usr/bin/renice 2>/dev/null || true
+      setcap 'cap_sys_nice+ep' /usr/bin/ionice 2>/dev/null || true
+    fi
+
+    # Install systemd user service
+    if [ -d /etc/systemd/user ]; then
+      cp /opt/dynalloc/systemd/dynalloc.service /etc/systemd/user/dynalloc.service
+    fi
+
+    # Create default config location
+    mkdir -p /etc/dynalloc
+
+    echo ""
+    echo "DynAlloc installed successfully!"
+    echo ""
+    echo "To enable as a user service (recommended):"
+    echo "  mkdir -p ~/.config/systemd/user"
+    echo "  cp /opt/dynalloc/systemd/dynalloc.service ~/.config/systemd/user/"
+    echo "  systemctl --user daemon-reload"
+    echo "  systemctl --user enable --now dynalloc.service"
+    echo ""
+    echo "To test in dry-run mode first:"
+    echo "  DYNALLOC_DRY_RUN=1 node /opt/dynalloc/dynalloc-daemon.js"
+    echo ""
+    echo "CLI tool: dynalloc status | doctor | boost <pid>"
+    echo ""
+    echo "Documentation: /opt/dynalloc/Configuration.md"
+    echo ""
+  ;;
+  abort-upgrade|abort-deconfigure|abort-remove)
+  ;;
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+esac
+
+#DEBHELPER#
+
+exit 0

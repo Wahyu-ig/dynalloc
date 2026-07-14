@@ -1,0 +1,58 @@
+# Arch Linux install hook for DynAlloc
+# This file is referenced by PKGBUILD's `install=dynalloc.install`
+
+post_install() {
+  # Set capabilities for non-root use (optional)
+  if command -v setcap >/dev/null 2>&1; then
+    setcap 'cap_sys_nice+ep' /usr/bin/renice 2>/dev/null || true
+    setcap 'cap_sys_nice+ep' /usr/bin/ionice 2>/dev/null || true
+  fi
+
+  echo ""
+  echo "==> DynAlloc installed successfully!"
+  echo ""
+  echo "==> To enable as a user service:"
+  echo "    systemctl --user enable --now dynalloc.service"
+  echo ""
+  echo "==> To test in dry-run mode first:"
+  echo "    DYNALLOC_DRY_RUN=1 node /opt/dynalloc/dynalloc-daemon.js"
+  echo ""
+  echo "==> CLI tool:"
+  echo "    dynalloc status"
+  echo "    dynalloc doctor"
+  echo "    dynalloc boost <pid>"
+  echo ""
+  echo "==> Documentation:"
+  echo "    /opt/dynalloc/Configuration.md"
+  echo "    /opt/dynalloc/Architecture.md"
+  echo ""
+}
+
+post_upgrade() {
+  echo ""
+  echo "==> DynAlloc upgraded to $1"
+  echo "==> Restart the daemon to apply:"
+  echo "    systemctl --user restart dynalloc.service"
+  echo ""
+
+  # Re-set capabilities if needed
+  if command -v setcap >/dev/null 2>&1; then
+    setcap 'cap_sys_nice+ep' /usr/bin/renice 2>/dev/null || true
+    setcap 'cap_sys_nice+ep' /usr/bin/ionice 2>/dev/null || true
+  fi
+}
+
+pre_remove() {
+  echo "==> Stopping DynAlloc daemon..."
+  systemctl --user stop dynalloc.service 2>/dev/null || true
+  systemctl --user disable dynalloc.service 2>/dev/null || true
+  pkill -f "dynalloc-daemon.js" 2>/dev/null || true
+}
+
+post_remove() {
+  # Clean up state files
+  rm -f /tmp/dynalloc-state.json 2>/dev/null || true
+  rm -f /tmp/dynalloc-*.sock 2>/dev/null || true
+  echo "==> DynAlloc removed. Config preserved in /etc/dynalloc."
+  echo "==> To fully purge: sudo rm -rf /etc/dynalloc /opt/dynalloc"
+}
